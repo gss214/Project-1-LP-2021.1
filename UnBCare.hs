@@ -38,8 +38,10 @@ Caso o remédio ainda não exista no estoque, o novo estoque a ser retornado dev
 -}
 
 comprarMedicamento :: Medicamento -> Quantidade -> EstoqueMedicamentos -> EstoqueMedicamentos
-comprarMedicamento = undefined
-
+comprarMedicamento med qnt [] = [(med,qnt)]
+comprarMedicamento med qnt ((m,q):as) 
+                  | m == med = (med, q + qnt) : as
+                  | otherwise = (m,q) : comprarMedicamento med qnt as
 
 {-
    QUESTÃO 2, VALOR: 1,0 ponto
@@ -52,7 +54,10 @@ onde v é o novo estoque.
 -}
 
 tomarMedicamento :: Medicamento -> EstoqueMedicamentos -> Maybe EstoqueMedicamentos
-tomarMedicamento = undefined
+tomarMedicamento med [] = Nothing 
+tomarMedicamento med ((m,q):as)
+               | m == med && q-1 >= 0 = Just ((m, q - 1) : as)
+               | otherwise = tomarMedicamento med as
 
 
 {-
@@ -65,7 +70,10 @@ Se o medicamento não existir, retorne 0.
 -}
 
 consultarMedicamento :: Medicamento -> EstoqueMedicamentos -> Quantidade
-consultarMedicamento = undefined
+consultarMedicamento _ [] = 0
+consultarMedicamento med ((m,q):as)
+                  | med == m = q
+                  | otherwise = consultarMedicamento med as
 
 
 {-
@@ -82,8 +90,8 @@ consultarMedicamento = undefined
 -}
 
 demandaMedicamentos :: Receituario -> EstoqueMedicamentos
-demandaMedicamentos = undefined
-
+demandaMedicamentos [] = []
+demandaMedicamentos ((m,h):as) = (m, length h) : demandaMedicamentos as
 
 {-
    QUESTÃO 5  VALOR: 1,0 ponto, sendo 0,5 para cada função.
@@ -98,12 +106,32 @@ demandaMedicamentos = undefined
 
  -}
 
+sorted :: (Ord a) => [a] -> Bool
+sorted [] = True
+sorted [x] = True
+sorted (x:y:xs) =  (x <= y) && sorted (y:xs)
+
+isEqual :: (String, [Int]) -> [(String, [Int])] -> Bool 
+isEqual _ [] = True 
+isEqual (a,b) ((c,d):as)
+            | a == c = False 
+            | otherwise = isEqual (a,b) as
+
+allDifferent :: (Eq a) => [a] -> Bool
+allDifferent [] = True
+allDifferent (x:xs) = x `notElem` xs && allDifferent xs
+
 receituarioValido :: Receituario -> Bool
-receituarioValido = undefined
+receituarioValido [] = True  
+receituarioValido ((m,h):xs)
+               | not (sorted ((m,h):xs)) || not (sorted h) || not (isEqual (m,h) xs) || not (allDifferent h) = False 
+               | otherwise = receituarioValido xs
 
 planoValido :: PlanoMedicamento -> Bool
-planoValido = undefined
-
+planoValido [] = True 
+planoValido ((h, m):xs)
+               | not (sorted ((h, m):xs)) || not (sorted m) || not (allDifferent m) = False 
+               | otherwise = planoValido xs
 
 {-
 
