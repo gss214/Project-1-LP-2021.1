@@ -37,9 +37,20 @@ Caso o remédio ainda não exista no estoque, o novo estoque a ser retornado dev
 
 -}
 
+{-
+Função checkMedicine responsavel por verificar se ha medicamento, se nao ha adicionar no inicio
+-}
+
+checkMedicine :: Medicamento -> EstoqueMedicamentos -> Bool 
+checkMedicine _ [] = False  
+checkMedicine med ((m,q):as)
+      | med == m = True 
+      | otherwise = checkMedicine med as 
+
 comprarMedicamento :: Medicamento -> Quantidade -> EstoqueMedicamentos -> EstoqueMedicamentos
-comprarMedicamento med qnt [] = [(med,qnt)]
+comprarMedicamento med qnt [] = [(med,qnt)] 
 comprarMedicamento med qnt ((m,q):as) 
+                  | not (checkMedicine med ((m,q):as)) = (med,qnt) : (m,q):as
                   | m == med = (med, q + qnt) : as
                   | otherwise = (m,q) : comprarMedicamento med qnt as
 
@@ -106,32 +117,44 @@ demandaMedicamentos ((m,h):as) = (m, length h) : demandaMedicamentos as
 
  -}
 
-sorted :: (Ord a) => [a] -> Bool
-sorted [] = True
-sorted [x] = True
-sorted (x:y:xs) =  (x <= y) && sorted (y:xs)
+{-
+A função isSorted verifica se uma lista está ordenada e tem elementos distintos
+-}
 
-isEqual :: (String, [Int]) -> [(String, [Int])] -> Bool 
+isSorted :: (Ord a) => [a] -> Bool
+isSorted [] = True
+isSorted [x] = True
+isSorted (x:y:xs) =  (x < y) && isSorted (y:xs)
+
+{-
+A função AllDiferent verifica se os medicamentos num receituario são ordenados e dinstintos
+-}
+
+allDifferent :: Receituario -> Bool 
+allDifferent [] = True 
+allDifferent ((med, horarios):tail)
+            | not (isEqual (med, horarios) tail) = False 
+            | otherwise = allDifferent tail
+
+{-
+A função isEqual verifica se tem alguma ocorrência duplicada de um medicamento em um receituario
+-}
+
+isEqual :: (String, [Int]) -> Receituario  -> Bool 
 isEqual _ [] = True 
 isEqual (a,b) ((c,d):as)
             | a == c = False 
             | otherwise = isEqual (a,b) as
 
-allDifferent :: (Eq a) => [a] -> Bool
-allDifferent [] = True
-allDifferent (x:xs) = x `notElem` xs && allDifferent xs
-
 receituarioValido :: Receituario -> Bool
-receituarioValido [] = True  
-receituarioValido ((m,h):xs)
-               | not (sorted ((m,h):xs)) || not (sorted h) || not (isEqual (m,h) xs) || not (allDifferent h) = False 
-               | otherwise = receituarioValido xs
+receituarioValido n 
+            | isSorted n && allDifferent n && length (filter isSorted [horarios | (_,horarios) <- n]) == length [horarios | (_,horarios) <- n] = True 
+            | otherwise = False 
 
 planoValido :: PlanoMedicamento -> Bool
-planoValido [] = True 
-planoValido ((h, m):xs)
-               | not (sorted ((h, m):xs)) || not (sorted m) || not (allDifferent m) = False 
-               | otherwise = planoValido xs
+planoValido n 
+         | isSorted n && length (filter isSorted [med | (_, med) <- n]) == length [med | (_, med) <- n] = True 
+         | otherwise = False 
 
 {-
 
@@ -147,8 +170,58 @@ planoValido ((h, m):xs)
 
  -}
 
+{-
+Função checkMedication responsavel por chegar se há ocorrência de compra e medicagem de um mesmo medicamento 
+-}
+
+checkMedication :: Medicamento -> [Cuidado] -> Bool 
+checkMedication _ [] = False 
+checkMedication med (Medicar m:xs)
+               | m == med = True 
+               | otherwise = checkMedication med xs
+checkMedication med (Comprar m q:xs)
+               | m == med = True 
+               | otherwise = checkMedication med xs
+
+{-
+Função validMedication responsavel por validar a lista de cuidados, 
+para que não tenha um medicamento com ocorrência de compra e medicagem
+-}
+
+validMedication :: [Cuidado] -> Bool 
+validMedication [] = True  
+validMedication (Comprar m q:xs) 
+               | checkMedication m xs = False 
+               | otherwise = validMedication xs
+validMedication (Medicar m:xs)
+               | checkMedication m xs = False 
+               | otherwise = validMedication xs
+
+{-
+Função getMedication responsavel por criar uma lista de medicamentos
+dada uma lista de cuidado
+-}
+
+getMedication :: [Cuidado] -> [Medicamento]
+getMedication [] = []
+getMedication (Medicar m:xs) = m : getMedication xs
+getMedication (Comprar m q:xs) = getMedication xs
+
+{-
+Função validMedicationLexi valida se para cada horário, as ocorrências
+de Medicar estão ordenadas lexicograficamente
+-}
+
+validMedicationLexi :: [[Cuidado]] -> Bool 
+validMedicationLexi [] = True 
+validMedicationLexi (x:xs)
+                  | isSorted (getMedication x) = validMedicationLexi xs 
+                  | otherwise = False 
+
 plantaoValido :: Plantao -> Bool
-plantaoValido = undefined
+plantaoValido n 
+            | isSorted [horarios | (horarios, _) <- n] && length (filter validMedication ([cuidados | (_, cuidados) <- n])) == length [cuidados | (_, cuidados) <- n] && validMedicationLexi [m | (_,m) <- n] = True 
+            | otherwise = False 
 
 
 {-
@@ -162,9 +235,53 @@ plantaoValido = undefined
 
 -}
 
-geraPlanoReceituario :: Receituario -> PlanoMedicamento
-geraPlanoReceituario = undefined
+{-
+Função quick sort para ordernar a lista de horários 
+-}
+quickSort :: [Horario] -> [Horario]
+quickSort [] = []
+quickSort (x:xs) = quickSort [e | e <- xs, e < x] ++ [x] ++ quickSort [e | e <- xs, e > x]
 
+
+{-
+Função getSchedules responsavel por pegar a lista de horarios dado um 
+receituario
+-}
+
+getSchedules :: Receituario -> [Horario]
+getSchedules [] = []
+getSchedules ((_, horarios):xs) = [h | h <- horarios] ++ getSchedules xs 
+
+{-
+Função checkSchedule responsavel por checar se um horario esta em uma lista de horarios
+-}
+
+checkSchedule :: Horario -> [Horario] -> Bool 
+checkSchedule _ [] = False 
+checkSchedule h (x:xs)
+   | h == x = True 
+   | otherwise = checkSchedule h xs
+
+{-
+Função assembleMedicine responsavel por juntar os medicamentos em uma lista dado o horario e o receituario, ela verifica se o horario está na lista de horarios de cada medicamento do receituario
+-}
+
+assembleMedicine :: Horario -> Receituario -> [Medicamento]
+assembleMedicine _ [] = []
+assembleMedicine h ((m,ho):ys) 
+   | checkSchedule h ho = m : assembleMedicine h ys
+   | otherwise = assembleMedicine h ys
+
+{-
+Função assemblePlan responsavel por criar o plano medico dado um receituario e uma lista de horarios
+-}
+
+assemblePlan :: Receituario -> [Horario] -> PlanoMedicamento 
+assemblePlan _ [] = []
+assemblePlan ((m,ho):ys) (h:hs) = (h, assembleMedicine h ((m,ho):ys)) : assemblePlan ((m,ho):ys) hs 
+
+geraPlanoReceituario :: Receituario -> PlanoMedicamento
+geraPlanoReceituario n = assemblePlan n (quickSort (getSchedules n))
 
 {- QUESTÃO 8  VALOR: 1,0 ponto
 
