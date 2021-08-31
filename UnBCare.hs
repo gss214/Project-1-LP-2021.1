@@ -238,7 +238,7 @@ plantaoValido n
 {-
 Função quick sort para ordernar a lista de horários 
 -}
-quickSort :: [Horario] -> [Horario]
+
 quickSort [] = []
 quickSort (x:xs) = quickSort [e | e <- xs, e < x] ++ [x] ++ quickSort [e | e <- xs, e > x]
 
@@ -293,8 +293,47 @@ geraPlanoReceituario n = assemblePlan n (quickSort (getSchedules n))
 
 -}
 
+{-
+Função getMedicines responsavel por pegar a lista de medicamentos dado um 
+Plano
+-}
+
+getMedicines :: PlanoMedicamento -> [Medicamento]
+getMedicines [] = []
+getMedicines ((_, medicamentos):xs) = [m | m <- medicamentos] ++ getMedicines xs 
+
+{-
+Função checkM responsavel verificar se um medicamento está presente em uma lista 
+de medicamentos
+-}
+
+checkM :: Medicamento -> [Medicamento] -> Bool 
+checkM _ [] = False 
+checkM med (m:xs)
+         | med == m = True 
+         | otherwise = checkM med xs
+
+{-
+Função assembleSchedule responsavel montar a lista de horarios dado um Medicamento e
+um PlanoMedicamento
+-}
+
+assembleSchedule :: Medicamento -> PlanoMedicamento -> [Horario]
+assembleSchedule _ [] = []
+assembleSchedule med ((h,lm):xs)
+                  | checkM med lm = h : assembleSchedule med xs
+                  | otherwise = assembleSchedule med xs
+
+{-
+Função assembleReceituario responsavel montar o Receituario a partir de um PlanoMedicamento e uma lista de Medicamentos
+-}
+
+assembleReceituario :: PlanoMedicamento -> [Medicamento] -> Receituario  
+assembleReceituario _ [] = []
+assembleReceituario ((h, lm):xs) (m:ys) = (m, assembleSchedule m ((h, lm):xs)) : assembleReceituario ((h, lm):xs) ys 
+
 geraReceituarioPlano :: PlanoMedicamento -> Receituario
-geraReceituarioPlano = undefined
+geraReceituarioPlano n = assembleReceituario n (quickSort (getMedicines n))
 
 
 {-  QUESTÃO 9 VALOR: 1,0 ponto
@@ -306,9 +345,23 @@ deve ser Just v, onde v é o valor final do estoque de medicamentos
 
 -}
 
-executaPlantao :: Plantao -> EstoqueMedicamentos -> Maybe EstoqueMedicamentos
-executaPlantao = undefined
+tomarMedicamento2 :: Medicamento -> EstoqueMedicamentos -> EstoqueMedicamentos
+tomarMedicamento2 _ [] = []
+tomarMedicamento2 med ((m,q):as)
+               | m == med  = (m, q - 1) : tomarMedicamento2 med as
+               | otherwise = (m,q) : tomarMedicamento2 med as
 
+executeList :: [Cuidado] -> EstoqueMedicamentos -> EstoqueMedicamentos 
+executeList [] em = em 
+executeList (Medicar m:xs) em = executeList xs (tomarMedicamento2 m em)
+executeList (Comprar m q:xs) em = executeList xs (comprarMedicamento m q em)
+
+executaPlantao :: Plantao -> EstoqueMedicamentos -> Maybe EstoqueMedicamentos
+executaPlantao [] em = Just em
+executaPlantao ((_,Medicar m:as):xs) em 
+               | tomarMedicamento m em == Nothing = Nothing 
+               | otherwise = executaPlantao xs (executeList (Medicar m:as) em)
+executaPlantao ((_,Comprar m q:as):xs) em = executaPlantao xs (executeList (Comprar m q:as) em)
 
 {-
 QUESTÃO 10 VALOR: 1,0 ponto
