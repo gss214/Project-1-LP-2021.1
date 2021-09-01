@@ -1,6 +1,7 @@
 module UnBCare where
 
 import ModeloDados
+import Data.Map.Strict (Map)
 
 {-
 
@@ -38,7 +39,12 @@ Caso o remédio ainda não exista no estoque, o novo estoque a ser retornado dev
 -}
 
 {-
-Função checkMedicine responsavel por verificar se ha medicamento, se nao ha adicionar no inicio
+Função checkMedicine é responsavel por verificar se ha um Medicamento em um
+EstoqueMedicamento. A função é recursiva, caso base é o EstoqueMedicamentos vazio,
+se for retornamos False pois não achamos o Medicamento na lista. Caso o EstoqueMedicamento
+não estiver vazio é verificado se o Medicamento da tupla atual é o Medicamento que
+eu estou procurando, se sim retornamos True, se não chamamos a função com a cauda da
+lista para continuar a busca
 -}
 
 checkMedicine :: Medicamento -> EstoqueMedicamentos -> Bool 
@@ -64,12 +70,26 @@ onde v é o novo estoque.
 
 -}
 
+{-
+Função updateEstoque é responsavel por atualizar o estoque dado um medicamento.
+A função é recursiva com o caso base sendo o EstoqueMedicamentos vazio. Caso não
+for vazio buscamos o Medicamento e se encontramos retornamos ele com a cauda da lista,
+se não chamamos a função concatenando o elemento atual e a chamada da função com
+os argumentos Medicamento buscado e o resto da lista, fazemos dessa forma para não 
+perdemos o elemento atual 
+-}
+
+updateEstoque :: Medicamento -> EstoqueMedicamentos -> EstoqueMedicamentos 
+updateEstoque _ [] = []
+updateEstoque med ((m,q):as)
+               | med == m && q-1 >= 0 = (m,q-1) : as
+               | otherwise = (m,q) : updateEstoque med as
+
 tomarMedicamento :: Medicamento -> EstoqueMedicamentos -> Maybe EstoqueMedicamentos
 tomarMedicamento med [] = Nothing 
-tomarMedicamento med ((m,q):as)
-               | m == med && q-1 >= 0 = Just ((m, q - 1) : as)
-               | otherwise = tomarMedicamento med as
-
+tomarMedicamento med em
+               | consultarMedicamento med em /= 0 = Just (updateEstoque med em)
+               | otherwise = Nothing 
 
 {-
    QUESTÃO 3  VALOR: 1,0 ponto
@@ -126,15 +146,6 @@ isSorted [] = True
 isSorted [x] = True
 isSorted (x:y:xs) =  (x < y) && isSorted (y:xs)
 
-{-
-A função AllDiferent verifica se os medicamentos num receituario são ordenados e dinstintos
--}
-
-allDifferent :: Receituario -> Bool 
-allDifferent [] = True 
-allDifferent ((med, horarios):tail)
-            | not (isEqual (med, horarios) tail) = False 
-            | otherwise = allDifferent tail
 
 {-
 A função isEqual verifica se tem alguma ocorrência duplicada de um medicamento em um receituario
@@ -145,6 +156,15 @@ isEqual _ [] = True
 isEqual (a,b) ((c,d):as)
             | a == c = False 
             | otherwise = isEqual (a,b) as
+{-
+A função AllDiferent verifica se os medicamentos num receituario são ordenados e dinstintos
+-}
+
+allDifferent :: Receituario -> Bool 
+allDifferent [] = True 
+allDifferent ((med, horarios):tail)
+            | not (isEqual (med, horarios) tail) = False 
+            | otherwise = allDifferent tail
 
 receituarioValido :: Receituario -> Bool
 receituarioValido n 
@@ -171,7 +191,8 @@ planoValido n
  -}
 
 {-
-Função checkMedication responsavel por chegar se há ocorrência de compra e medicagem de um mesmo medicamento 
+Função checkMedication responsavel por chegar se há ocorrência de
+Compra e Medicar de um mesmo Medicamento 
 -}
 
 checkMedication :: Medicamento -> [Cuidado] -> Bool 
@@ -184,8 +205,8 @@ checkMedication med (Comprar m q:xs)
                | otherwise = checkMedication med xs
 
 {-
-Função validMedication responsavel por validar a lista de cuidados, 
-para que não tenha um medicamento com ocorrência de compra e medicagem
+Função validMedication responsavel por validar a lista de Cuidado, 
+para que não tenha um Medicamento com ocorrência de Comprar e Medicar
 -}
 
 validMedication :: [Cuidado] -> Bool 
@@ -198,8 +219,8 @@ validMedication (Medicar m:xs)
                | otherwise = validMedication xs
 
 {-
-Função getMedication responsavel por criar uma lista de medicamentos
-dada uma lista de cuidado
+Função getMedication responsavel por criar uma lista de Medicamentos
+dada uma lista de Cuidado
 -}
 
 getMedication :: [Cuidado] -> [Medicamento]
@@ -208,7 +229,7 @@ getMedication (Medicar m:xs) = m : getMedication xs
 getMedication (Comprar m q:xs) = getMedication xs
 
 {-
-Função validMedicationLexi valida se para cada horário, as ocorrências
+Função validMedicationLexi valida se para cada Horário, as ocorrências
 de Medicar estão ordenadas lexicograficamente
 -}
 
@@ -236,7 +257,8 @@ plantaoValido n
 -}
 
 {-
-Função quick sort para ordernar a lista de horários 
+Função quickSort apresentada em aula retorna uma lista ordernada e com
+elementos distintos 
 -}
 
 quickSort [] = []
@@ -244,8 +266,8 @@ quickSort (x:xs) = quickSort [e | e <- xs, e < x] ++ [x] ++ quickSort [e | e <- 
 
 
 {-
-Função getSchedules responsavel por pegar a lista de horarios dado um 
-receituario
+Função getSchedules responsavel por pegar a lista de Horario dado um 
+Receituario
 -}
 
 getSchedules :: Receituario -> [Horario]
@@ -253,7 +275,7 @@ getSchedules [] = []
 getSchedules ((_, horarios):xs) = [h | h <- horarios] ++ getSchedules xs 
 
 {-
-Função checkSchedule responsavel por checar se um horario esta em uma lista de horarios
+Função checkSchedule responsavel por checar se um Horario esta em uma lista de Horario
 -}
 
 checkSchedule :: Horario -> [Horario] -> Bool 
@@ -263,7 +285,7 @@ checkSchedule h (x:xs)
    | otherwise = checkSchedule h xs
 
 {-
-Função assembleMedicine responsavel por juntar os medicamentos em uma lista dado o horario e o receituario, ela verifica se o horario está na lista de horarios de cada medicamento do receituario
+Função assembleMedicine responsavel por juntar os medicamentos em uma lista dado o Horario e o Receituario, ela verifica se o Horario está na lista de Horario de cada Medicamento do Receituario
 -}
 
 assembleMedicine :: Horario -> Receituario -> [Medicamento]
@@ -273,7 +295,8 @@ assembleMedicine h ((m,ho):ys)
    | otherwise = assembleMedicine h ys
 
 {-
-Função assemblePlan responsavel por criar o plano medico dado um receituario e uma lista de horarios
+Função assemblePlan responsavel por criar o PlanoMedicamento dado um Receituario
+e uma lista de Horario
 -}
 
 assemblePlan :: Receituario -> [Horario] -> PlanoMedicamento 
@@ -294,7 +317,7 @@ geraPlanoReceituario n = assemblePlan n (quickSort (getSchedules n))
 -}
 
 {-
-Função getMedicines responsavel por pegar a lista de medicamentos dado um 
+Função getMedicines responsavel por pegar a lista de Medicamento dado um 
 Plano
 -}
 
@@ -303,8 +326,8 @@ getMedicines [] = []
 getMedicines ((_, medicamentos):xs) = [m | m <- medicamentos] ++ getMedicines xs 
 
 {-
-Função checkM responsavel verificar se um medicamento está presente em uma lista 
-de medicamentos
+Função checkM responsavel verificar se um Medicamento está presente em uma lista 
+de Medicamento
 -}
 
 checkM :: Medicamento -> [Medicamento] -> Bool 
@@ -314,7 +337,7 @@ checkM med (m:xs)
          | otherwise = checkM med xs
 
 {-
-Função assembleSchedule responsavel montar a lista de horarios dado um Medicamento e
+Função assembleSchedule responsavel montar a lista de Horario dado um Medicamento e
 um PlanoMedicamento
 -}
 
@@ -325,7 +348,7 @@ assembleSchedule med ((h,lm):xs)
                   | otherwise = assembleSchedule med xs
 
 {-
-Função assembleReceituario responsavel montar o Receituario a partir de um PlanoMedicamento e uma lista de Medicamentos
+Função assembleReceituario responsavel montar o Receituario a partir de um PlanoMedicamento e uma lista de Medicamento
 -}
 
 assembleReceituario :: PlanoMedicamento -> [Medicamento] -> Receituario  
@@ -345,23 +368,48 @@ deve ser Just v, onde v é o valor final do estoque de medicamentos
 
 -}
 
-tomarMedicamento2 :: Medicamento -> EstoqueMedicamentos -> EstoqueMedicamentos
-tomarMedicamento2 _ [] = []
-tomarMedicamento2 med ((m,q):as)
-               | m == med  = (m, q - 1) : tomarMedicamento2 med as
-               | otherwise = (m,q) : tomarMedicamento2 med as
+{-
+A função executeCuidados é responsavel executar uma lista de Cuidado. A função é recursiva, caso base é a lista de Cuidado estar vazia, se 
+o elemento for do tipo Medicar, é chamada a função updateEstoque para
+atualizar o estoque, se o elemento for do tipo Comprar, é chamada a função
+comprarMedicamendo. 
+-}
 
-executeList :: [Cuidado] -> EstoqueMedicamentos -> EstoqueMedicamentos 
-executeList [] em = em 
-executeList (Medicar m:xs) em = executeList xs (tomarMedicamento2 m em)
-executeList (Comprar m q:xs) em = executeList xs (comprarMedicamento m q em)
+executeCuidados :: [Cuidado] -> EstoqueMedicamentos -> EstoqueMedicamentos 
+executeCuidados [] em = em 
+executeCuidados (Medicar m:xs) em = executeCuidados xs (updateEstoque m em)
+executeCuidados (Comprar m q:xs) em = executeCuidados xs (comprarMedicamento m q em)
+
+{-
+A função isValid determina se uma lista de Cuidado é valida, ou seja,
+se não tem medicamento com quantidade 0. A função é recursiva com o 
+caso base sendo a lista de Cuidado vazia, se tiver é porque a lista
+é valida, caso o elemento for do tipo Medicar é verificado a quantidade 
+do medicamento no estoque dado, se for 0 a lista não é valida, se não for
+continua a recursividade. E se o elemento for do tipo Comprar, só é dado
+continuidade na função recursiva
+-}
+
+isValid :: [Cuidado] -> EstoqueMedicamentos -> Bool 
+isValid [] _ = True 
+isValid (Medicar m:xs) em
+         | consultarMedicamento m em == 0 = False
+         | otherwise = isValid xs em
+isValid (Comprar m q:xs) em = isValid xs em
+
+{-
+Função executaPlantao é responsavel por executar um Plantao. A função é recursiva,
+o caso base é o Plantao vazio, se for retorna Just EstoqueMedicamentos atualizado. Caso
+o Plantao não tiver vazio é verificado se a lista de Cuidado no plantão é valida, se
+não retorna Nothing, se sim é chamada a função com a cauda da lista e o EstoqueMedicamento
+atualizado.
+-}
 
 executaPlantao :: Plantao -> EstoqueMedicamentos -> Maybe EstoqueMedicamentos
 executaPlantao [] em = Just em
-executaPlantao ((_,Medicar m:as):xs) em 
-               | tomarMedicamento m em == Nothing = Nothing 
-               | otherwise = executaPlantao xs (executeList (Medicar m:as) em)
-executaPlantao ((_,Comprar m q:as):xs) em = executaPlantao xs (executeList (Comprar m q:as) em)
+executaPlantao ((_,cuidados):xs) em 
+               | not(isValid cuidados em) = Nothing 
+               | otherwise = executaPlantao xs (executeCuidados cuidados em)
 
 {-
 QUESTÃO 10 VALOR: 1,0 ponto
