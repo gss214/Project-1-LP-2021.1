@@ -1,7 +1,6 @@
 module UnBCare where
 
 import ModeloDados
-import Data.Map.Strict (Map)
 
 {-
 
@@ -423,9 +422,60 @@ juntamente com ministrar medicamento.
 
 -}
 
-satisfaz :: Plantao -> PlanoMedicamento -> EstoqueMedicamentos  -> Bool
-satisfaz = undefined
+{-
+Função getFromCuidado é usada para retornar uma lista de tuplas a partir 
+de uma lista de Cuidado
+-}
 
+getFromCuidado :: Horario -> [Cuidado] -> [(Horario, Medicamento)]
+getFromCuidado _ [] = []
+getFromCuidado h (Medicar m:xs) = (h, m) : getFromCuidado h xs 
+getFromCuidado h (Comprar _ _:xs) = getFromCuidado h xs 
+
+{-
+Função getFromCuidado é responsavel por, dado um Plantao, retornar
+uma lista de tuplas com Horario e Medicamento
+-}
+
+getFromPlantao :: Plantao -> [(Horario, Medicamento)]
+getFromPlantao [] = []
+getFromPlantao ((h, lc):xs) = getFromCuidado h lc ++ getFromPlantao xs
+
+{-
+Função getFromMedicamento retorna uma lista de tuplas a partir com Horario e Medicamento
+de uma lista de Medicamento
+-}
+
+getFromMedicamento :: Horario -> [Medicamento] -> [(Horario, Medicamento)]
+getFromMedicamento _ [] = []
+getFromMedicamento h (m:xs) = (h, m) : getFromMedicamento h xs 
+
+{-
+Função getFromPlano é responsavel por, dado um PlanoMedicamento, retornar
+uma lista de tuplas com Horario e Medicamento
+-}
+
+
+getFromPlano :: PlanoMedicamento -> [(Horario, Medicamento)]
+getFromPlano [] = []
+getFromPlano ((h, lm):xs) = getFromMedicamento h lm ++ getFromPlano xs
+
+{-
+A função correspondence verifica se um Plantao está de acordo com o planoMedicamento,
+isto é, se todos os medicamentos e horarios do Plantao batem com os
+medicamentos e horarios do Plano Medicamento
+-}
+
+correspondence :: Plantao -> PlanoMedicamento -> Bool 
+correspondence p pm = getFromPlantao p == getFromPlano pm 
+
+{-
+A função satisfaz verifica se o Plantao e o PlanoMedicamento correspondem
+e se o Plantao é executado dado o estoque
+-}
+
+satisfaz :: Plantao -> PlanoMedicamento -> EstoqueMedicamentos  -> Bool
+satisfaz p pm em = correspondence p pm && (executaPlantao p em /= Nothing)
 
 {-
 
